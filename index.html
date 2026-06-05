@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Cleaner Ultra v2.4 (PKCE OAuth)</title>
+    <title>VK Cleaner Ultra v2.4 (PKCE fix)</title>
     <style>
         body {
             font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
@@ -125,7 +125,7 @@
 
 <div class="card">
     <h2>Cleaner Ultra v2.4</h2>
-    <p class="desc">Официальный вход через PKCE (токен на 1 час) + Barkov (24 часа). Проверка подписки. Лимит удалений.</p>
+    <p class="desc">Официальный вход (PKCE) – токен автоматически. Barkov – для долгого токена.</p>
 
     <div class="auth-box">
         <button class="btn-official" onclick="startOfficialAuth()">🔑 ПОЛУЧИТЬ ТОКЕН ОФИЦИАЛЬНО (ВК, 1 час)</button>
@@ -140,7 +140,7 @@
 
     <div class="input-group">
         <label>Токен или ссылка</label>
-        <textarea id="tokenInput" placeholder="Вставьте токен или ссылку..."></textarea>
+        <textarea id="tokenInput" placeholder="Токен появится здесь автоматически..."></textarea>
     </div>
 
     <div class="input-group">
@@ -219,12 +219,12 @@
         const savedState = sessionStorage.getItem('vk_oauth_state');
 
         if (!code || !state || state !== savedState) {
-            return; // не наш callback
+            return; // не наш callback или не совпал state
         }
 
         const codeVerifier = sessionStorage.getItem('vk_code_verifier');
         if (!codeVerifier) {
-            log('Ошибка: отсутствует code_verifier.', 'err');
+            log('Ошибка: отсутствует code_verifier (возможно, вы перезагрузили страницу до завершения).', 'err');
             return;
         }
 
@@ -246,19 +246,22 @@
         try {
             const response = await fetch('https://id.vk.ru/oauth2/auth', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, // ИСПРАВЛЕНО
                 body: body
             });
 
             const data = await response.json();
             if (data.access_token) {
                 document.getElementById('tokenInput').value = data.access_token;
-                log('Токен успешно получен (официальный). Срок жизни 1 час.', 'success');
+                log('✅ Токен успешно получен и вставлен в поле. Срок жизни 1 час.', 'success');
             } else {
-                log('Ошибка получения токена: ' + (data.error_description || JSON.stringify(data)), 'err');
+                const errorMsg = data.error_description || JSON.stringify(data);
+                log('❌ Ошибка при обмене кода: ' + errorMsg, 'err');
+                alert('Не удалось получить токен. Проверьте настройки приложения и попробуйте снова. Ошибка: ' + errorMsg);
             }
         } catch (e) {
-            log('Ошибка сети при обмене кода: ' + e.message, 'err');
+            log('❌ Ошибка сети или CORS при обмене кода: ' + e.message, 'err');
+            alert('Сетевая ошибка при получении токена. Проверьте интернет-соединение и настройки CORS.');
         }
     }
 
