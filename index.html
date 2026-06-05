@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Cleaner Ultra v2.7 (Official SDK)</title>
-    <!-- VK ID SDK – автоматически управляет PKCE, device_id, куками -->
+    <title>VK Cleaner Ultra v2.7 (SDK fix)</title>
+    <!-- VK ID SDK -->
     <script src="https://unpkg.com/@vkid/sdk@latest/dist-sdk/umd/index.js"></script>
     <style>
         body {
@@ -127,14 +127,14 @@
 
 <div class="card">
     <h2>Cleaner Ultra v2.7</h2>
-    <p class="desc">Официальный вход (SDK VK ID) – токен автоматически. Barkov для долгого токена.</p>
+    <p class="desc">Официальный вход (перенаправление) + Barkov. Токен автоматически.</p>
 
     <div class="auth-box">
         <button class="btn-official" onclick="startOfficialAuth()">🔑 ПОЛУЧИТЬ ТОКЕН ОФИЦИАЛЬНО (ВК, 1 час)</button>
         <button class="btn-barkov" onclick="window.open('https://vk.barkov.net/gettoken.aspx?a=get&m=f&s=friends', '_blank')">🔑 ПОЛУЧИТЬ ТОКЕН ЧЕРЕЗ BARKOV (24 часа)</button>
         <div class="instruction">
             <b>Инструкция:</b><br>
-            <b>Способ 1 (официальный):</b> нажмите синюю кнопку, авторизуйтесь в открывшейся вкладке — токен подставится автоматически. Токен действует <b>1 час</b>.<br>
+            <b>Способ 1 (официальный):</b> нажмите синюю кнопку – вас перенаправит на авторизацию ВК. После подтверждения вы вернётесь обратно, и токен автоматически вставится в поле. Токен действует <b>1 час</b>.<br>
             <b>Способ 2 (Barkov):</b> нажмите жёлтую кнопку, разрешите доступ, скопируйте ссылку из адресной строки и вставьте ниже. Токен действует <b>24 часа</b>.<br>
             <br><b>Важно:</b> токен привязан к вашему IP.
         </div>
@@ -171,7 +171,7 @@
 
 <script>
     const AUTHOR_ID = 273611137;
-    const CLIENT_ID = '54608914'; // строка
+    const CLIENT_ID = '54608914';
     const REDIRECT_URI = 'https://ikisyar-tech.github.io/ads';
 
     let isRunning = false;
@@ -183,43 +183,69 @@
     const subscribeStatusDiv = document.getElementById('subscribeStatus');
 
     // ---------- Инициализация VK ID SDK ----------
-    VKIDSDK.init({
-        app: CLIENT_ID,
-        redirectUrl: REDIRECT_URI,
-        state: 'vk_cleaner_state',
-        mode: VKIDSDK.ConfigAuthMode.InNewTab, // откроется новая вкладка
-    });
+    function initSDK() {
+        if (typeof VKIDSDK === 'undefined') {
+            log('❌ VK ID SDK не загрузился. Проверьте интернет-соединение или блокировку скриптов.', 'err');
+            return false;
+        }
+        try {
+            VKIDSDK.init({
+                app: CLIENT_ID,
+                redirectUrl: REDIRECT_URI,
+                state: 'vk_cleaner_state',
+                mode: VKIDSDK.ConfigAuthMode.Redirect, // перенаправление в этой же вкладке (безопасно)
+            });
+            log('✅ SDK инициализирован.', 'success');
+            return true;
+        } catch (e) {
+            log('❌ Ошибка инициализации SDK: ' + e.message, 'err');
+            return false;
+        }
+    }
 
+    // Обработчик callback
     async function handleSDKCallback() {
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const state = params.get('state');
 
         if (code && state === 'vk_cleaner_state') {
+            log('Обмен кода подтверждения на токен...');
             try {
                 const authResult = await VKIDSDK.auth.exchangeCode(code);
                 if (authResult.access_token) {
                     document.getElementById('tokenInput').value = authResult.access_token;
                     log('✅ Токен успешно получен через SDK и вставлен в поле. Срок жизни 1 час.', 'success');
                 } else {
-                    log('❌ SDK не вернул токен.', 'err');
+                    log('❌ SDK не вернул токен. Ответ: ' + JSON.stringify(authResult), 'err');
                 }
             } catch (e) {
                 log('❌ Ошибка обмена кода SDK: ' + (e.message || JSON.stringify(e)), 'err');
             }
-            // Очищаем параметры из URL
+            // Очищаем URL
             history.replaceState(null, null, window.location.pathname);
         }
     }
 
     function startOfficialAuth() {
+        if (typeof VKIDSDK === 'undefined') {
+            alert('SDK не загружен. Обновите страницу или используйте Barkov.');
+            return;
+        }
+        log('Запуск официальной авторизации...');
         VKIDSDK.auth.login({
             scope: 'friends',
             response_type: 'code',
         });
     }
 
-    window.addEventListener('load', handleSDKCallback);
+    // Инициализируем при загрузке
+    window.addEventListener('load', () => {
+        const sdkReady = initSDK();
+        if (sdkReady) {
+            handleSDKCallback();
+        }
+    });
 
     // ---------- Общие функции ----------
     function log(msg, type = '') {
