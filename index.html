@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Cleaner Ultra v2.3 (Official OAuth)</title>
+    <title>VK Cleaner Ultra v2.3 (Blank OAuth fix)</title>
     <style>
         body {
             font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
@@ -127,22 +127,22 @@
 
 <div class="card">
     <h2>Cleaner Ultra v2.3</h2>
-    <p class="desc">Официальный токен ВК + Barkov. Проверка подписки. Лимит удалений.</p>
+    <p class="desc">Официальный токен ВК (ручная вставка) + Barkov. Проверка подписки. Лимит удалений.</p>
 
     <div class="auth-box">
         <button class="btn-official" onclick="getOfficialToken()">🔑 ПОЛУЧИТЬ ТОКЕН ОФИЦИАЛЬНО (ВК)</button>
         <button class="btn-barkov" onclick="window.open('https://vk.barkov.net/gettoken.aspx?a=get&m=f&s=friends', '_blank')">🔑 ПОЛУЧИТЬ ТОКЕН ЧЕРЕЗ BARKOV</button>
         <div class="instruction">
             <b>Инструкция:</b><br>
-            <b>Способ 1 (официальный):</b> нажмите синюю кнопку, авторизуйтесь в ВК, разрешите доступ — вас вернёт на эту страницу с готовым токеном.<br>
+            <b>Способ 1 (официальный):</b> нажмите синюю кнопку, авторизуйтесь в ВК, разрешите доступ — откроется пустая страница. <b>Скопируйте токен из адресной строки</b> (после <b>#access_token=</b>) и вставьте в поле ниже.<br>
             <b>Способ 2 (Barkov):</b> нажмите жёлтую кнопку, разрешите доступ, скопируйте ссылку из адресной строки и вставьте ниже.<br>
-            <br><b>Важно:</b> токен действует 24 часа и привязан к вашему IP. При использовании Barkov после авторизации откроется пустая страница — просто скопируйте её адрес.
+            <br><b>Важно:</b> токен действует 24 часа и привязан к вашему IP.
         </div>
     </div>
 
     <div class="input-group">
         <label>Токен или ссылка</label>
-        <textarea id="tokenInput" placeholder="Вставьте ссылку из адресной строки или чистый токен..."></textarea>
+        <textarea id="tokenInput" placeholder="Вставьте токен или ссылку..."></textarea>
     </div>
 
     <div class="input-group">
@@ -172,8 +172,8 @@
 <script>
     const AUTHOR_ID = 273611137;
     const OFFICIAL_CLIENT_ID = 54608914;
-    // Новый адрес страницы
-    const REDIRECT_URI = 'https://ikisyar-tech.github.io/ads';
+    // Используем blank.html для гарантированной совместимости
+    const REDIRECT_URI = 'https://oauth.vk.com/blank.html';
 
     let isRunning = false;
     let currentToken = '';
@@ -182,21 +182,6 @@
 
     const logDiv = document.getElementById('log');
     const subscribeStatusDiv = document.getElementById('subscribeStatus');
-
-    // При загрузке страницы проверяем, есть ли токен в URL (после официальной авторизации)
-    window.addEventListener('load', () => {
-        const hash = window.location.hash;
-        if (hash) {
-            const params = new URLSearchParams(hash.substring(1));
-            const token = params.get('access_token');
-            if (token && token.length > 30) {
-                document.getElementById('tokenInput').value = token;
-                log('Токен получен через официальный OAuth и вставлен в поле.', 'success');
-                // Очищаем хэш, чтобы не мешал
-                history.replaceState(null, null, window.location.pathname + window.location.search);
-            }
-        }
-    });
 
     function log(msg, type = '') {
         const div = document.createElement('div');
@@ -226,7 +211,7 @@
 
     function getOfficialToken() {
         const url = `https://oauth.vk.com/authorize?client_id=${OFFICIAL_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=friends&response_type=token&v=5.131`;
-        window.location.href = url;
+        window.open(url, '_blank');
     }
 
     function vkCall(method, params, token) {
