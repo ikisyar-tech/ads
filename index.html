@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Cleaner Ultra v2.7 (SDK fix)</title>
-    <!-- VK ID SDK -->
-    <script src="https://unpkg.com/@vkid/sdk@latest/dist-sdk/umd/index.js"></script>
+    <title>VK Cleaner Ultra v2.9 (PKCE fix)</title>
     <style>
         body {
             font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
@@ -126,8 +124,8 @@
 <body>
 
 <div class="card">
-    <h2>Cleaner Ultra v2.7</h2>
-    <p class="desc">Официальный вход (перенаправление) + Barkov. Токен автоматически.</p>
+    <h2>Cleaner Ultra v2.9</h2>
+    <p class="desc">Официальный токен (PKCE, авто) + Barkov. Проверка подписки. Лимит удалений.</p>
 
     <div class="auth-box">
         <button class="btn-official" onclick="startOfficialAuth()">🔑 ПОЛУЧИТЬ ТОКЕН ОФИЦИАЛЬНО (ВК, 1 час)</button>
@@ -182,70 +180,92 @@
     const logDiv = document.getElementById('log');
     const subscribeStatusDiv = document.getElementById('subscribeStatus');
 
-    // ---------- Инициализация VK ID SDK ----------
-    function initSDK() {
-        if (typeof VKIDSDK === 'undefined') {
-            log('❌ VK ID SDK не загрузился. Проверьте интернет-соединение или блокировку скриптов.', 'err');
-            return false;
-        }
-        try {
-            VKIDSDK.init({
-                app: CLIENT_ID,
-                redirectUrl: REDIRECT_URI,
-                state: 'vk_cleaner_state',
-                mode: VKIDSDK.ConfigAuthMode.Redirect, // перенаправление в этой же вкладке (безопасно)
-            });
-            log('✅ SDK инициализирован.', 'success');
-            return true;
-        } catch (e) {
-            log('❌ Ошибка инициализации SDK: ' + e.message, 'err');
-            return false;
-        }
+    // ---------- PKCE helpers ----------
+    function generateCodeVerifier() {
+        const array = new Uint8Array(64);
+        crypto.getRandomValues(array);
+        return btoa(String.fromCharCode(...array))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    // Обработчик callback
-    async function handleSDKCallback() {
+    async function generateCodeChallenge(verifier) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return btoa(String.fromCharCode(...new Uint8Array(hash)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // ---------- Официальная авторизация ----------
+    async function startOfficialAuth() {
+        const codeVerifier = generateCodeVerifier();
+        sessionStorage.setItem('vk_code_verifier', codeVerifier);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        const state = Math.random().toString(36).substring(2, 12);
+        sessionStorage.setItem('vk_oauth_state', state);
+
+        // ВАЖНО: device_id не передаём — он придёт от VK ID
+        const authUrl = `https://id.vk.ru/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=friends&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}`;
+        window.location.href = authUrl;
+    }
+
+    async function handleOAuthCallback() {
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const state = params.get('state');
+        const deviceId = params.get('device_id'); // Берём device_id из URL
+        const savedState = sessionStorage.getItem('vk_oauth_state');
 
-        if (code && state === 'vk_cleaner_state') {
-            log('Обмен кода подтверждения на токен...');
-            try {
-                const authResult = await VKIDSDK.auth.exchangeCode(code);
-                if (authResult.access_token) {
-                    document.getElementById('tokenInput').value = authResult.access_token;
-                    log('✅ Токен успешно получен через SDK и вставлен в поле. Срок жизни 1 час.', 'success');
-                } else {
-                    log('❌ SDK не вернул токен. Ответ: ' + JSON.stringify(authResult), 'err');
-                }
-            } catch (e) {
-                log('❌ Ошибка обмена кода SDK: ' + (e.message || JSON.stringify(e)), 'err');
-            }
-            // Очищаем URL
-            history.replaceState(null, null, window.location.pathname);
-        }
-    }
+        if (!code || !state || state !== savedState) return;
 
-    function startOfficialAuth() {
-        if (typeof VKIDSDK === 'undefined') {
-            alert('SDK не загружен. Обновите страницу или используйте Barkov.');
+        const codeVerifier = sessionStorage.getItem('vk_code_verifier');
+        if (!codeVerifier) {
+            log('Ошибка: отсутствует code_verifier.', 'err');
             return;
         }
-        log('Запуск официальной авторизации...');
-        VKIDSDK.auth.login({
-            scope: 'friends',
-            response_type: 'code',
+
+        if (!deviceId) {
+            log('Ошибка: VK ID не вернул device_id.', 'err');
+            return;
+        }
+
+        // Очищаем URL и sessionStorage
+        history.replaceState(null, null, window.location.pathname);
+        sessionStorage.removeItem('vk_oauth_state');
+        sessionStorage.removeItem('vk_code_verifier');
+
+        log('Обмен кода подтверждения на токен...');
+
+        const body = new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: CLIENT_ID,
+            code: code,
+            code_verifier: codeVerifier,
+            redirect_uri: REDIRECT_URI,
+            device_id: deviceId
         });
+
+        try {
+            const response = await fetch('https://id.vk.ru/oauth2/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            });
+
+            const data = await response.json();
+            if (data.access_token) {
+                document.getElementById('tokenInput').value = data.access_token;
+                log('✅ Токен успешно получен и вставлен в поле. Срок жизни 1 час.', 'success');
+            } else {
+                const errorMsg = data.error_description || JSON.stringify(data);
+                log('❌ Ошибка при обмене кода: ' + errorMsg, 'err');
+            }
+        } catch (e) {
+            log('❌ Ошибка сети при обмене кода: ' + e.message, 'err');
+        }
     }
 
-    // Инициализируем при загрузке
-    window.addEventListener('load', () => {
-        const sdkReady = initSDK();
-        if (sdkReady) {
-            handleSDKCallback();
-        }
-    });
+    window.addEventListener('load', handleOAuthCallback);
 
     // ---------- Общие функции ----------
     function log(msg, type = '') {
