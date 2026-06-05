@@ -1,1 +1,450 @@
 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK Cleaner Ultra v2.3 (Official OAuth)</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
+            background-color: #ebedf0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 95%;
+            max-width: 500px;
+        }
+        h2 { color: #2c3e50; text-align: center; margin: 0 0 10px 0; }
+        .desc { font-size: 13px; color: #7f8c8d; text-align: center; margin-bottom: 20px; line-height: 1.5; }
+
+        .auth-box {
+            background: #f0f7ff;
+            border: 1px dashed #4a76a8;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .auth-box button {
+            margin: 5px 0;
+        }
+        .instruction {
+            font-size: 12px;
+            color: #4a76a8;
+            margin-top: 10px;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 11px; color: #95a5a6; font-weight: bold; margin: 0 0 5px 5px; text-transform: uppercase; }
+        textarea, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 11px;
+            background: #fafafa;
+            outline: none;
+            resize: none;
+        }
+        input[type="number"] {
+            font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
+            font-size: 14px;
+        }
+        textarea { height: 70px; }
+
+        .controls { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 15px; }
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.1s, background 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-start { background: #4a76a8; color: white; }
+        .btn-stop { background: #faebeb; color: #e74c3c; }
+        .btn-subscribe { background: #27ae60; color: white; }
+        .btn-official { background: #4a76a8; color: white; width: 100%; margin-top: 6px; }
+        .btn-barkov { background: #f39c12; color: white; width: 100%; margin-top: 6px; }
+
+        #status-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #edf0f2;
+            margin-bottom: 15px;
+        }
+        .stat-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; color: #34495e; }
+        .stat-val { font-weight: bold; color: #4a76a8; }
+
+        .subscribe-status {
+            background: #fef9e7;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-align: center;
+            border: 1px solid #f9e79f;
+            display: none;
+        }
+        .subscribe-status.success { background: #eafaf1; border-color: #2ecc71; color: #27ae60; }
+        .subscribe-status.error { background: #fdedec; border-color: #e74c3c; color: #c0392b; }
+
+        #log {
+            margin-top: 10px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            height: 180px;
+            overflow-y: auto;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+        .log-success { color: #2ecc71; }
+        .log-warn { color: #f1c40f; }
+        .log-err { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Cleaner Ultra v2.3</h2>
+    <p class="desc">Официальный токен ВК + Barkov. Проверка подписки. Лимит удалений.</p>
+
+    <div class="auth-box">
+        <button class="btn-official" onclick="getOfficialToken()">🔑 ПОЛУЧИТЬ ТОКЕН ОФИЦИАЛЬНО (ВК)</button>
+        <button class="btn-barkov" onclick="window.open('https://vk.barkov.net/gettoken.aspx?a=get&m=f&s=friends', '_blank')">🔑 ПОЛУЧИТЬ ТОКЕН ЧЕРЕЗ BARKOV</button>
+        <div class="instruction">
+            <b>Инструкция:</b><br>
+            <b>Способ 1 (официальный):</b> нажмите синюю кнопку, авторизуйтесь в ВК, разрешите доступ — вас вернёт на эту страницу с готовым токеном.<br>
+            <b>Способ 2 (Barkov):</b> нажмите жёлтую кнопку, разрешите доступ, скопируйте ссылку из адресной строки и вставьте ниже.<br>
+            <br><b>Важно:</b> токен действует 24 часа и привязан к вашему IP. При использовании Barkov после авторизации откроется пустая страница — просто скопируйте её адрес.
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>Токен или ссылка</label>
+        <textarea id="tokenInput" placeholder="Вставьте ссылку из адресной строки или чистый токен..."></textarea>
+    </div>
+
+    <div class="input-group">
+        <label>Макс. удалений (0 = без лимита)</label>
+        <input type="number" id="limitInput" value="100" min="0" step="1">
+    </div>
+
+    <div class="subscribe-status" id="subscribeStatus"></div>
+
+    <div class="controls" id="actionButtons">
+        <button id="checkSubBtn" class="btn-start" onclick="checkSubscription()">ПРОВЕРИТЬ ПОДПИСКУ</button>
+        <button id="startBtn" class="btn-start" style="display:none;" onclick="initProcess()">ЗАПУСТИТЬ УДАЛЕНИЕ</button>
+        <button id="subscribeBtn" class="btn-subscribe" style="display:none;" onclick="subscribeToAuthor()">ПОДПИСАТЬСЯ НА АВТОРА</button>
+        <button class="btn-stop" onclick="stopProcess()">СТОП</button>
+    </div>
+
+    <div id="status-display">
+        <div class="stat-row"><span>Статус:</span> <span id="status-text" class="stat-val">Ожидание</span></div>
+        <div class="stat-row"><span>Друзей загружено:</span> <span id="total-friends" class="stat-val">0</span></div>
+        <div class="stat-row"><span>"Собачек" найдено:</span> <span id="dog-count" class="stat-val">0</span></div>
+        <div class="stat-row"><span>Удалено:</span> <span id="deleted-count" class="stat-val">0</span></div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<script>
+    const AUTHOR_ID = 273611137;
+    const OFFICIAL_CLIENT_ID = 54608914;
+    const REDIRECT_URI = 'https://ikisyar-tech.github.io/vk-anti-dog/';
+
+    let isRunning = false;
+    let currentToken = '';
+    let subscriptionChecked = false;
+    let subscriptionValid = false;
+
+    const logDiv = document.getElementById('log');
+    const subscribeStatusDiv = document.getElementById('subscribeStatus');
+
+    // При загрузке страницы проверяем, есть ли токен в URL (после официальной авторизации)
+    window.addEventListener('load', () => {
+        const hash = window.location.hash;
+        if (hash) {
+            const params = new URLSearchParams(hash.substring(1));
+            const token = params.get('access_token');
+            if (token && token.length > 30) {
+                document.getElementById('tokenInput').value = token;
+                log('Токен получен через официальный OAuth и вставлен в поле.', 'success');
+                // Очищаем хэш, чтобы не мешал
+                history.replaceState(null, null, window.location.pathname + window.location.search);
+            }
+        }
+    });
+
+    function log(msg, type = '') {
+        const div = document.createElement('div');
+        if (type) div.className = 'log-' + type;
+        const time = new Date().toLocaleTimeString();
+        div.innerText = `[${time}] ${msg}`;
+        logDiv.appendChild(div);
+    }
+
+    function updateStat(id, val) { document.getElementById(id).innerText = val; }
+    function setStatus(text) { document.getElementById('status-text').innerText = text; }
+
+    function showSubscribeStatus(msg, isSuccess) {
+        subscribeStatusDiv.style.display = 'block';
+        subscribeStatusDiv.className = 'subscribe-status ' + (isSuccess ? 'success' : 'error');
+        subscribeStatusDiv.innerText = msg;
+    }
+
+    function hideSubscribeStatus() {
+        subscribeStatusDiv.style.display = 'none';
+    }
+
+    function getTokenFromInput() {
+        const raw = document.getElementById('tokenInput').value.trim();
+        return raw.includes('access_token=') ? raw.split('access_token=')[1].split('&')[0] : raw;
+    }
+
+    function getOfficialToken() {
+        const url = `https://oauth.vk.com/authorize?client_id=${OFFICIAL_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=friends&response_type=token&v=5.131`;
+        window.location.href = url;
+    }
+
+    function vkCall(method, params, token) {
+        return new Promise((resolve) => {
+            const cbName = 'vk_' + Math.random().toString(16).slice(2);
+            window[cbName] = (data) => {
+                delete window[cbName];
+                document.body.removeChild(script);
+                resolve(data);
+            };
+            const script = document.createElement('script');
+            const query = new URLSearchParams({...params, access_token: token, v: '5.131', callback: cbName});
+            script.src = `https://api.vk.com/method/${method}?${query}`;
+            document.body.appendChild(script);
+        });
+    }
+
+    function updateUIForSubscription(isValid) {
+        document.getElementById('checkSubBtn').style.display = 'none';
+        document.getElementById('subscribeBtn').style.display = isValid ? 'none' : 'inline-block';
+        document.getElementById('startBtn').style.display = isValid ? 'inline-block' : 'none';
+    }
+
+    async function checkSubscription() {
+        const token = getTokenFromInput();
+        if (token.length < 30) {
+            alert('Сначала вставьте корректный токен или ссылку!');
+            return;
+        }
+        currentToken = token;
+        hideSubscribeStatus();
+        setStatus('Проверка подписки...');
+        log('Проверка связи с автором...');
+
+        try {
+            const userRes = await vkCall('users.get', {}, currentToken);
+            if (userRes.error) {
+                log('Ошибка получения данных пользователя: ' + userRes.error.error_msg, 'err');
+                setStatus('Ошибка токена');
+                showSubscribeStatus('Неверный токен или доступ запрещён.', false);
+                return;
+            }
+            const currentUserId = userRes.response[0].id;
+
+            if (currentUserId === AUTHOR_ID) {
+                log('Вы автор скрипта – подписка не требуется.', 'success');
+                subscriptionValid = true;
+                subscriptionChecked = true;
+                showSubscribeStatus('✅ Вы владелец, удаление разрешено.', true);
+                updateUIForSubscription(true);
+                setStatus('Готов к удалению');
+                return;
+            }
+
+            const friendRes = await vkCall('friends.areFriends', { user_ids: AUTHOR_ID }, currentToken);
+            if (friendRes.error) {
+                log('Ошибка проверки дружбы: ' + friendRes.error.error_msg, 'err');
+                setStatus('Ошибка проверки');
+                showSubscribeStatus('Не удалось проверить подписку.', false);
+                updateUIForSubscription(false);
+                return;
+            }
+
+            const status = friendRes.response[0].friend_status;
+            if (status === 0) {
+                log('Вы не подписаны на автора и не друзья.', 'warn');
+                subscriptionValid = false;
+                subscriptionChecked = false;
+                showSubscribeStatus('❌ Нет подписки или дружбы. Нажмите «Подписаться на автора».', false);
+                updateUIForSubscription(false);
+                setStatus('Требуется подписка');
+            } else {
+                const msg = status === 3 ? 'Вы друзья с автором.' : 'Подписка/заявка активна.';
+                log(msg, 'success');
+                subscriptionValid = true;
+                subscriptionChecked = true;
+                showSubscribeStatus('✅ Подписка подтверждена. Можно начинать удаление.', true);
+                updateUIForSubscription(true);
+                setStatus('Готов к удалению');
+            }
+        } catch (e) {
+            log('Ошибка: ' + e.message, 'err');
+            setStatus('Ошибка');
+            showSubscribeStatus('Произошла ошибка при проверке.', false);
+        }
+    }
+
+    async function subscribeToAuthor() {
+        if (!currentToken) {
+            alert('Сначала проверьте токен!');
+            return;
+        }
+        setStatus('Подписка...');
+        log('Попытка подписаться на автора...');
+        try {
+            const res = await vkCall('friends.add', { user_id: AUTHOR_ID }, currentToken);
+            if (res.error) {
+                log('Ошибка подписки: ' + res.error.error_msg, 'err');
+                showSubscribeStatus('Не удалось подписаться. Возможно, вы уже отправили заявку.', false);
+            } else {
+                log('Заявка/подписка отправлена. Статус: ' + (res.response || 'ok'), 'success');
+                await checkSubscription();
+            }
+        } catch (e) {
+            log('Ошибка подписки: ' + e.message, 'err');
+        }
+    }
+
+    function stopProcess() {
+        isRunning = false;
+        log('Команда остановки получена', 'warn');
+        setStatus('Остановка...');
+    }
+
+    async function initProcess() {
+        if (isRunning) return;
+        const token = currentToken || getTokenFromInput();
+        if (token.length < 30) {
+            alert('Сначала вставьте токен!');
+            return;
+        }
+        currentToken = token;
+
+        if (!subscriptionValid) {
+            log('Сначала подтвердите подписку на автора.', 'err');
+            showSubscribeStatus('Подписка не подтверждена. Нажмите «Проверить подписку» и подпишитесь.', false);
+            updateUIForSubscription(false);
+            return;
+        }
+
+        const limitInput = document.getElementById('limitInput');
+        const limitVal = parseInt(limitInput.value, 10);
+        const limit = isNaN(limitVal) ? 0 : limitVal;
+
+        isRunning = true;
+        logDiv.innerHTML = '';
+        log(`Запуск глубокого сканирования (лимит удалений: ${limit > 0 ? limit : 'без ограничений'})...`);
+        setStatus('Сканирование');
+
+        updateStat('deleted-count', '0');
+        updateStat('dog-count', '0');
+        updateStat('total-friends', '0');
+
+        let allFriends = [];
+        let offset = 0;
+        let hasMore = true;
+
+        try {
+            while (hasMore && isRunning) {
+                log(`Запрос пачки друзей: смещение ${offset}...`);
+                const res = await vkCall('friends.get', { fields: 'deactivated', count: 5000, offset: offset }, token);
+
+                if (res.error) {
+                    log('Ошибка API: ' + res.error.error_msg, 'err');
+                    break;
+                }
+
+                const items = res.response.items;
+                allFriends = allFriends.concat(items);
+                updateStat('total-friends', allFriends.length);
+
+                if (items.length < 5000) {
+                    hasMore = false;
+                } else {
+                    offset += 5000;
+                    await new Promise(r => setTimeout(r, 1200));
+                }
+            }
+
+            const dogs = allFriends.filter(f => f.deactivated);
+            updateStat('dog-count', dogs.length);
+            log(`Сканирование завершено. Найдено собак: ${dogs.length}`, 'warn');
+
+            if (dogs.length === 0) {
+                log('Собачек не обнаружено.', 'success');
+                isRunning = false;
+                setStatus('Завершено');
+                return;
+            }
+
+            const effectiveLimit = limit > 0 ? Math.min(limit, dogs.length) : dogs.length;
+            log(`Начинаю безопасное удаление (лимит: ${effectiveLimit}, паузы 2-4 сек)...`);
+            setStatus(`Удаление (${effectiveLimit})`);
+
+            let deleted = 0;
+            for (let i = 0; i < dogs.length; i++) {
+                if (!isRunning) break;
+                if (limit > 0 && deleted >= limit) {
+                    log(`Достигнут лимит удалений: ${limit}`, 'warn');
+                    break;
+                }
+
+                const dog = dogs[i];
+                const delRes = await vkCall('friends.delete', { user_id: dog.id }, token);
+
+                if (delRes.response && delRes.response.success) {
+                    deleted++;
+                    updateStat('deleted-count', `${deleted}/${effectiveLimit}`);
+                    log(`[${deleted}/${effectiveLimit}] Удален: id${dog.id}`, 'success');
+                } else {
+                    log(`[${deleted}/${effectiveLimit}] Сбой id${dog.id}: ${delRes.error?.error_msg || 'unknown'}`, 'err');
+                }
+
+                const waitTime = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
+                await new Promise(r => setTimeout(r, waitTime));
+            }
+
+            log(isRunning ? 'Очистка успешно завершена!' : 'Процесс прерван', 'success');
+            setStatus(isRunning ? 'Завершено' : 'Прервано');
+            isRunning = false;
+
+        } catch (e) {
+            log('Критический сбой: ' + e.message, 'err');
+            isRunning = false;
+            setStatus('Ошибка');
+        }
+    }
+</script>
+
+</body>
+</html>
