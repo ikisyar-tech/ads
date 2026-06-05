@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Cleaner Ultra v2.5 (PKCE + device_id)</title>
+    <title>VK Cleaner Ultra v2.6 (PKCE + device_id fix)</title>
     <style>
         body {
             font-family: -apple-system, system-ui, "Helvetica Neue", Roboto, sans-serif;
@@ -124,7 +124,7 @@
 <body>
 
 <div class="card">
-    <h2>Cleaner Ultra v2.5</h2>
+    <h2>Cleaner Ultra v2.6</h2>
     <p class="desc">Официальный вход (PKCE + device_id). Токен автоматически. Barkov для долгого токена.</p>
 
     <div class="auth-box">
@@ -201,11 +201,11 @@
     }
 
     function generateDeviceId() {
-        return crypto.randomUUID ? crypto.randomUUID() : 
-            'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+        // Генерируем UUID v4
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     // ---------- Официальная авторизация ----------
@@ -216,14 +216,15 @@
         const state = Math.random().toString(36).substring(2, 12);
         sessionStorage.setItem('vk_oauth_state', state);
 
-        // Генерируем и сохраняем device_id
+        // Генерируем или получаем существующий device_id
         let deviceId = sessionStorage.getItem('vk_device_id');
         if (!deviceId) {
             deviceId = generateDeviceId();
             sessionStorage.setItem('vk_device_id', deviceId);
         }
 
-        const authUrl = `https://id.vk.ru/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=friends&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}`;
+        // Добавляем device_id в URL авторизации
+        const authUrl = `https://id.vk.ru/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=friends&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&device_id=${deviceId}`;
         window.location.href = authUrl;
     }
 
@@ -244,7 +245,7 @@
             return;
         }
 
-        // Очищаем URL и sessionStorage (кроме device_id – он остаётся для следующей авторизации)
+        // Очищаем URL и sessionStorage (кроме device_id)
         history.replaceState(null, null, window.location.pathname);
         sessionStorage.removeItem('vk_oauth_state');
         sessionStorage.removeItem('vk_code_verifier');
@@ -274,11 +275,11 @@
             } else {
                 const errorMsg = data.error_description || JSON.stringify(data);
                 log('❌ Ошибка при обмене кода: ' + errorMsg, 'err');
-                alert('Не удалось получить токен. Проверьте настройки приложения и попробуйте снова. Ошибка: ' + errorMsg);
+                alert('Не удалось получить токен. Ошибка: ' + errorMsg);
             }
         } catch (e) {
             log('❌ Ошибка сети при обмене кода: ' + e.message, 'err');
-            alert('Сетевая ошибка при получении токена. Проверьте интернет-соединение.');
+            alert('Сетевая ошибка при получении токена.');
         }
     }
 
