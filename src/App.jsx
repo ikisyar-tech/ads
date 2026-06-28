@@ -14,13 +14,12 @@ function App() {
   useEffect(() => {
     bridge.send('VKWebAppInit');
     initApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initApp = async () => {
     try {
-      // 1. Авторизуемся (получаем токен)
       await authorize();
-      // 2. Загружаем данные
       await Promise.all([loadGroups(), loadFeed()]);
     } catch (e) {
       setSnackbar({ text: e.message || 'Ошибка загрузки данных' });
