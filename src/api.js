@@ -6,7 +6,7 @@ let accessToken = null;
 export async function authorize() {
   try {
     const data = await bridge.send('VKWebAppGetAuthToken', {
-      app_id: YOUR_APP_ID, // ⚠️ ЗАМЕНИТЕ на ID вашего приложения (число)
+      app_id: 54566958, // ⚠️ ЗАМЕНИТЕ на ID вашего приложения (число)
       scope: 'groups,wall,newsfeed', // права
     });
     accessToken = data.access_token;
